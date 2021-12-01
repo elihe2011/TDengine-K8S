@@ -1,0 +1,279 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: taos-cluster
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taos-cfg
+  namespace: taos-cluster
+  labels:
+    app: tdengine
+data:
+  CLUSTER: "1"
+  TAOS_KEEP: "3650"
+  TAOS_DEBUG_FLAG: "135"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: taos-pv
+  namespace: taos-cluster
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: taos-storage
+  local:
+    path: /data/tdengine
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - k8s-master
+          - k8s-node01
+          - k8s-node02
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: taos-pvc
+  namespace: taos-cluster
+spec:
+  storageClassName: taos-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taosd
+  namespace: taos-cluster
+  labels:
+    app: tdengine
+spec:
+  clusterIP: None
+  ports:
+  - name: tcp6030
+    protocol: "TCP"
+    port: 6030
+  - name: tcp6035
+    protocol: "TCP"
+    port: 6035
+  - name: tcp6041
+    protocol: "TCP"
+    port: 6041
+  - name: udp6030
+    protocol: "UDP"
+    port: 6030
+  - name: udp6031
+    protocol: "UDP"
+    port: 6031
+  - name: udp6032
+    protocol: "UDP"
+    port: 6032
+  - name: udp6033
+    protocol: "UDP"
+    port: 6033
+  - name: udp6034
+    protocol: "UDP"
+    port: 6034
+  - name: udp6035
+    protocol: "UDP"
+    port: 6035
+  - name: udp6036
+    protocol: "UDP"
+    port: 6036
+  - name: udp6037
+    protocol: "UDP"
+    port: 6037
+  - name: udp6038
+    protocol: "UDP"
+    port: 6038
+  - name: udp6039
+    protocol: "UDP"
+    port: 6039
+  - name: udp6040
+    protocol: "UDP"
+    port: 6040
+  selector:
+    app: tdengine
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: "tdengine"
+  namespace: taos-cluster
+  labels:
+    app: "tdengine"
+spec:
+  serviceName: "taosd"
+  replicas: 3
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: "tdengine"
+  template:
+    metadata:
+      name: "tdengine"
+      labels:
+        app: "tdengine"
+    spec:
+      volumes:
+      - name: taos-storage
+        persistentVolumeClaim:
+          claimName: taos-pvc
+      containers:
+      - name: "tdengine"
+        image: "tdengine-server:2.2.2.0"
+        envFrom:
+        - configMapRef:
+            name: taos-cfg
+        ports:
+        - name: tcp6030
+          protocol: "TCP"
+          containerPort: 6030
+        - name: tcp6035
+          protocol: "TCP"
+          containerPort: 6035
+        - name: tcp6041
+          protocol: "TCP"
+          containerPort: 6041
+        - name: udp6030
+          protocol: "UDP"
+          containerPort: 6030
+        - name: udp6031
+          protocol: "UDP"
+          containerPort: 6031
+        - name: udp6032
+          protocol: "UDP"
+          containerPort: 6032
+        - name: udp6033
+          protocol: "UDP"
+          containerPort: 6033
+        - name: udp6034
+          protocol: "UDP"
+          containerPort: 6034
+        - name: udp6035
+          protocol: "UDP"
+          containerPort: 6035
+        - name: udp6036
+          protocol: "UDP"
+          containerPort: 6036
+        - name: udp6037
+          protocol: "UDP"
+          containerPort: 6037
+        - name: udp6038
+          protocol: "UDP"
+          containerPort: 6038
+        - name: udp6039
+          protocol: "UDP"
+          containerPort: 6039
+        - name: udp6040
+          protocol: "UDP"
+          containerPort: 6040
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: SERVICE_NAME
+          value: "taosd"
+        - name: STS_NAME
+          value: "tdengine"
+        - name: STS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: TZ
+          value: "Asia/Shanghai"
+        # TAOS_ prefix will configured in taos.cfg, strip prefix and camelCase.
+        - name: TAOS_SERVER_PORT
+          value: "6030"
+        # Must set if you want a cluster.
+        - name: TAOS_FIRST_EP
+          value: "\$(STS_NAME)-0.\$(SERVICE_NAME).\$(STS_NAMESPACE).svc.cluster.local:\$(TAOS_SERVER_PORT)"
+        # TAOS_FQND should always be setted in k8s env.
+        - name: TAOS_FQDN
+          value: "\$(POD_NAME).\$(SERVICE_NAME).\$(STS_NAMESPACE).svc.cluster.local"
+        volumeMounts:
+        - name: taos-storage
+          mountPath: /var/lib/taos
+        readinessProbe:
+          exec:
+            command:
+            - taos
+            - -s
+            - "show mnodes"
+          initialDelaySeconds: 5
+          timeoutSeconds: 5000
+        livenessProbe:
+          tcpSocket:
+            port: 6030
+          initialDelaySeconds: 15
+          periodSeconds: 20    
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - taos-container
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taosd-np
+  namespace: taos-cluster
+  labels:
+    app: tdengine
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  type: NodePort
+  selector:
+    app: tdengine
+  ports:
+  - name: tcp6030
+    protocol: "TCP"
+    port: 6030
+    targetPort: 6030
+    nodePort: 36030
+  - name: tcp6035
+    protocol: "TCP"
+    port: 6035
+    targetPort: 6035
+    nodePort: 36035
+  - name: tcp6041
+    protocol: "TCP"
+    port: 6041
+    targetPort: 6041
+    nodePort: 36041
+
+
