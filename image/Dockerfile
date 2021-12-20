@@ -1,19 +1,40 @@
+FROM ubuntu:18.04 as builder
+RUN apt-get update \
+    && apt-get install -y gcc cmake build-essential git wget \
+    && apt-get clean \
+    && cd /usr/local/src \
+    && wget https://github.com/taosdata/TDengine/archive/refs/tags/ver-2.2.2.0.tar.gz \
+    && tar zxvf ver-2.2.2.0.tar.gz && cd TDengine-ver-2.2.2.0 \
+    && mkdir debug && cd debug \
+    && cmake .. && cmake --build . && make install
+WORKDIR /root
+
+
 FROM ubuntu:18.04
 LABEL MAINTAINER="hehz@huitone.com>"
 
 COPY ./entrypoint.sh /usr/bin/
+COPY --from=0 /usr/local/taos /usr/local/taos
+COPY --from=0 /etc/taos /etc/taos
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN sed -Ei "s#http://.*.ubuntu.com#http://mirrors.aliyun.com#" /etc/apt/sources.list \
-    && apt-get update \
+RUN apt-get update \
     && apt-get install -y apt-utils locales tzdata curl wget net-tools iproute2 iputils-ping sysstat binutils \
     && locale-gen en_US.UTF-8 \
     && apt-get clean \
-    && cd /tmp \
-    && wget -c https://www.taosdata.com/assets-download/TDengine-server-2.2.2.0-Linux-x64.tar.gz \
-    && tar xf TDengine-server*.tar.gz && cd TDengine-server-*/ && ./install.sh -e no \
-    && rm -rf /tmp/TD* \
-    && chmod +x /usr/bin/entrypoint.sh
+    && chmod +x /usr/bin/entrypoint.sh \
+    && ln -s /usr/local/taos/bin/taos /usr/bin/taos \
+    && ln -s /usr/local/taos/bin/taosd       /usr/bin/taosd \
+    && ln -s /usr/local/taos/bin/taosdump    /usr/bin/taosdump \
+    && ln -s /usr/local/taos/bin/taosdemo    /usr/bin/taosdemo \
+    && ln -s /usr/local/taos/bin/remove.sh   /usr/bin/rmtaos \
+    && ln -s /usr/local/taos/include/taoserror.h  /usr/include/taoserror.h \
+    && ln -s /usr/local/taos/include/taos.h  /usr/include/taos.h \
+    && ln -s /usr/local/taos/driver/libtaos.so.2.2.2.0  /usr/lib/libtaos.so.1 \
+    && ln -s /usr/lib/libtaos.so.1 /usr/lib/libtaos.so  \
+    && mkdir -p /var/lib/taos \
+    && mkdir -p /var/log/taos \
+    && chmod 777 /var/log/taos
 
 ENV LC_ALL=en_US.UTF-8
 ENV LANG=en_US.UTF-8
