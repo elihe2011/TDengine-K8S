@@ -242,7 +242,7 @@ spec:
                 - key: app
                   operator: In
                   values:
-                  - taos-container
+                  - tdengine
               topologyKey: kubernetes.io/hostname
 
 ---
