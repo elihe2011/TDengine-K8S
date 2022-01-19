@@ -4,7 +4,7 @@
 
 ```bash
 cd image
-docker build -t tdengine:2.2.2.0 .
+docker build -t tdengine:2.4.0.0 .
 ```
 
 
@@ -34,7 +34,7 @@ kubectl apply -f taos.yml
 # kubectl
 kubectl exec -it tdengine-0 -n taos-cluster -- taos -s "show dnodes;"
 
-Welcome to the TDengine shell from Linux, Client Version:2.2.2.0
+Welcome to the TDengine shell from Linux, Client Version:2.4.0.0
 Copyright (c) 2020 by TAOS Data, Inc. All rights reserved.
 
 taos> show dnodes;

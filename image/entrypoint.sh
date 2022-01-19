@@ -3,7 +3,7 @@
 set +e
 ulimit -c unlimited
 sysctl -w kernel.core_pattern=/corefile/core-%e-%p
-sed -e
+set -e
 
 if [ "x$TZ" != "x" ]; then
     ln -sf /usr/share/zoneinfo/$TZ /etc/localtime

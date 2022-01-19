@@ -3,8 +3,8 @@ RUN apt-get update \
     && apt-get install -y gcc cmake build-essential git wget \
     && apt-get clean \
     && cd /usr/local/src \
-    && wget https://github.com/taosdata/TDengine/archive/refs/tags/ver-2.2.2.0.tar.gz \
-    && tar zxvf ver-2.2.2.0.tar.gz && cd TDengine-ver-2.2.2.0 \
+    && wget https://github.com/taosdata/TDengine/archive/refs/tags/ver-2.4.0.0.tar.gz \
+    && tar zxvf ver-2.4.0.0.tar.gz && cd TDengine-ver-2.4.0.0 \
     && mkdir debug && cd debug \
     && cmake .. && cmake --build . && make install
 WORKDIR /root
@@ -30,7 +30,7 @@ RUN apt-get update \
     && ln -s /usr/local/taos/bin/remove.sh   /usr/bin/rmtaos \
     && ln -s /usr/local/taos/include/taoserror.h  /usr/include/taoserror.h \
     && ln -s /usr/local/taos/include/taos.h  /usr/include/taos.h \
-    && ln -s /usr/local/taos/driver/libtaos.so.2.2.2.0  /usr/lib/libtaos.so.1 \
+    && ln -s /usr/local/taos/driver/libtaos.so.2.4.0.0  /usr/lib/libtaos.so.1 \
     && ln -s /usr/lib/libtaos.so.1 /usr/lib/libtaos.so  \
     && mkdir -p /var/lib/taos \
     && mkdir -p /var/log/taos \

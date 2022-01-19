@@ -141,7 +141,7 @@ spec:
           claimName: taos-pvc
       containers:
       - name: "tdengine"
-        image: "tdengine-server:2.2.2.0"
+        image: "tdengine-server:2.4.0.0"
         envFrom:
         - configMapRef:
             name: taos-cfg
@@ -242,7 +242,7 @@ spec:
                 - key: app
                   operator: In
                   values:
-                  - tdengine
+                  - taos-container
               topologyKey: kubernetes.io/hostname
 
 ---
